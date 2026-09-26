@@ -34,6 +34,7 @@ class Level {
     fill("#ffd342");
     const { minutes, seconds } = timeToStringParts(this.timeLeft());
     text(`${minutes}:${seconds}`, 10, 20);
+    text(`${game.score}`, width - 100, 20);
     for (const junk of this.junk) {
       junk.draw();
     }

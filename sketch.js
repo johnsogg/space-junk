@@ -12,4 +12,10 @@ function draw() {
   game.move(deltaTime);
   // then draw all game elements
   game.draw();
+  // see if the level is done
+  if (game.isLevelComplete()) {
+    console.log(
+      "You win the level! Do some congrats ceremony and load the next",
+    );
+  }
 }

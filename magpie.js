@@ -135,6 +135,10 @@ class Magpie {
   }
 
   enableBeam(v) {
-    this.beam = v;
+    if (!v) this.beam = v;
+    // only turn on beam if we're not carrying junk
+    if (!this.capturedJunk) {
+      this.beam = v;
+    }
   }
 }

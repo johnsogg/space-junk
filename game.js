@@ -4,6 +4,8 @@
  */
 class Game {
   static JUNK_CATCH_TIME_MS = 500;
+  static JUNK_DROPOFF_TIME_MS = 1000;
+  static SCORE_DROPOFF = 100;
 
   /** All map data */
   levels;
@@ -25,6 +27,9 @@ class Game {
 
   /** When true, draw Physics debug graphics. Toggled with ~ or backtick. */
   debug;
+
+  /** Total game score */
+  score;
 
   /**
    * Create a Game instance. Importantly, constructors can't be async, so we
@@ -56,6 +61,8 @@ class Game {
 
     this.inputs = new Inputs(this.magpie);
     this.debug = false;
+
+    this.score = 0;
   }
 
   static async load() {
@@ -75,9 +82,12 @@ class Game {
     const junk = this.resolveBeam(delta);
     if (junk) {
       junk.caught = true;
+      junk.beamTime = 0;
       this.magpie.capturedJunk = junk;
       this.level.removeJunk(junk);
     }
+
+    this.mothership.resolveDropoff(delta);
   }
 
   /**
@@ -109,5 +119,17 @@ class Game {
     this.level.draw();
     this.mothership.draw();
     this.magpie.draw();
+  }
+
+  updateScore(reason) {
+    if (reason === "dropoff") {
+      this.score += Game.SCORE_DROPOFF;
+    }
+  }
+
+  isLevelComplete() {
+    // level is complete when there is no more junk to salvage and the magpie
+    // isn't hauling anything.
+    return this.level.junk.length === 0 && this.magpie.capturedJunk == null;
   }
 }

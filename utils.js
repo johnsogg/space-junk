@@ -28,3 +28,21 @@ function timeToStringParts(timeMs) {
   const seconds = String(secondsLeft % 60).padStart(2, "0");
   return { minutes, seconds };
 }
+
+/**
+ * Distance between two points { x, y } on the wrapping map. Because the edges
+ * wrap, you can get from a to b by going either way around, so for each axis
+ * use whichever way is shorter. Assumes both points are on the canvas.
+ *
+ * Named wrappedDist because p5 already has a global dist(), and redefining it
+ * throws "Cannot redefine property: dist".
+ **/
+function wrappedDist(a, b) {
+  let dx = Math.abs(a.x - b.x);
+  let dy = Math.abs(a.y - b.y);
+  dx = Math.min(dx, width - dx);
+  dy = Math.min(dy, height - dy);
+  // use p5's dist; get distance from origin to dx,dy. We could have also used
+  // the built-in Math.hypot function to get a hypotenuse.
+  return dist(0, 0, dx, dy);
+}
