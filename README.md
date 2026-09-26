@@ -91,11 +91,13 @@ Script order doesn't matter much, because nothing runs until p5 calls
   `timeLeft()` returns the remaining ms. `draw()` draws the timer text, then the
   junk. `move()` moves the junk.
 - **`physics.js`**: `Physics` holds `x`, `y`, `dx`, `dy`, and `rotation`
-  (radians). `move({ constrain })` adds velocity to position and, if
-  `constrain`, wraps the position into `[0, width)` × `[0, height)`.
-  `rotate(amt)` turns it. `thrust(amt)` pushes along the facing direction.
-  `draw()` draws debug graphics: a circle, a thin line to where the object will
-  be in 30 frames, and a thick 10px direction line.
+  (radians). Velocity is in pixels per second. `move(delta, { constrain })`
+  adds velocity × elapsed time to position and, if `constrain`, wraps the
+  position into `[0, width)` × `[0, height)`. `rotate(rate, delta)` turns it
+  (radians per second). `thrust(accel, delta)` speeds it up along the facing
+  direction (pixels per second, per second). `draw()` draws debug graphics: a
+  circle, a thin line to where the object will be in half a second, and a
+  thick 10px direction line.
 - **`magpie.js`**: `Magpie` holds a `physics`, a `beam` flag, and
   `capturedJunk` (a `Junk` or nothing). The static `drawMagpie()` draws the
   ship at the origin (beam triangle, dome, platform, window). `draw()` draws the
@@ -108,8 +110,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
   drift. `beamTime` (ms) is how long it has been in the beam, and it drains
   when the junk is out of the beam. The static `drawJunk()` draws the shape at
   the origin.
-- **`inputs.js`**: `Inputs.handleKeyDown()` checks `keyIsDown()` for WASD and
-  Space, and applies them to the Magpie. The global `keyPressed()` toggles
+- **`inputs.js`**: `Inputs.handleKeyDown(delta)` checks `keyIsDown()` for WASD
+  and Space, and applies them to the Magpie (thrust 360 px/s², reverse 180
+  px/s², turning 2.4 rad/s). The global `keyPressed()` toggles
   `game.debug` on `~` or backtick (guarded, since `game` is undefined until
   `load()` finishes). It returns `false` only for keys in `SCROLL_KEYS` (Space
   and the arrows).
@@ -129,6 +132,13 @@ Script order doesn't matter much, because nothing runs until p5 calls
   `(sin(r), -cos(r))`.
 - **Velocity is in screen coordinates.** Rotation only changes the direction of
   thrust, which gives Asteroids-style drift.
+- **Time flows in as `delta` (ms), like Godot's `_process(delta)`.** Only
+  `sketch.js` reads p5's `deltaTime` global. It passes it to `game.move(delta)`,
+  which passes it down to every `move()`, `handleKeyDown()`, and resolve step.
+  Rates are per second (velocity in px/s, thrust in px/s², turning in rad/s,
+  drift around 12 px/s), and `Physics` converts with `delta / 1000`. Motion is
+  the same speed at any frame rate. The old per-frame numbers were these ×
+  1/60 (velocity, turning) or × 1/3600 (thrust).
 - **Wrapping takes two things:** the position must wrap (`Physics.move` with
   `constrain`), and the object must be drawn with `drawEverywhere`. Nine copies
   are needed to cover the corners, not five.
@@ -199,12 +209,8 @@ Script order doesn't matter much, because nothing runs until p5 calls
 - The timer counts down to `0:00`, but nothing happens when it gets there.
 - **Pause and huge deltas.** When the tab loses focus, p5 stops calling
   `draw()`. When you come back, the first `deltaTime` can be several seconds
-  long. That one frame could fully capture junk under the beam or drain every
-  capture meter at once. Clamp the delta in `sketch.js`, e.g.
-  `Math.min(deltaTime, 50)`. Related: add a real pause, and decide whether the
-  level timer should stop during it. It currently uses `millis()`, so it keeps
-  running.
-- **Thread `delta` (ms) through every `move()`.** `Game.move` →
-  `resolveBeam(delta)` is being built first. After that, make the other `move()`
-  methods take `delta` so they're consistent. Only `sketch.js` should read p5's
-  `deltaTime` global (Godot's `_process(delta)`, but in ms).
+  long. That one frame could fully capture junk under the beam, drain every
+  capture meter at once, or jump every object several seconds along its path.
+  Clamp the delta in `sketch.js`, e.g. `Math.min(deltaTime, 50)`. Related: add
+  a real pause, and decide whether the level timer should stop during it. It
+  currently uses `millis()`, so it keeps running.

@@ -31,8 +31,8 @@ class Mothership {
     pop();
   }
 
-  move() {
-    this.physics.move({ constrain: true });
+  move(delta) {
+    this.physics.move(delta, { constrain: true });
   }
 
   resolveDropoff(delta) {

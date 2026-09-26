@@ -42,10 +42,10 @@ class Level {
   }
 
   /** Moves anything owned by the level (junk, comets, etc). */
-  move() {
+  move(delta) {
     for (const junk of this.junk) {
       if (!junk.caught) {
-        junk.move();
+        junk.move(delta);
       }
     }
   }

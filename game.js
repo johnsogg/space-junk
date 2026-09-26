@@ -56,8 +56,8 @@ class Game {
     this.mothership.physics.x = random(padW, padW * 3);
     this.mothership.physics.y = random(padH, padH * 3);
     this.mothership.physics.rotation = random(0, 2 * Math.PI);
-    this.mothership.physics.dx = random(-0.2, 0.2);
-    this.mothership.physics.dy = random(-0.2, 0.2);
+    this.mothership.physics.dx = random(-12, 12); // pixels per second
+    this.mothership.physics.dy = random(-12, 12);
 
     this.inputs = new Inputs(this.magpie);
     this.debug = false;
@@ -75,10 +75,10 @@ class Game {
    * interactions between things at their new positions.
    **/
   move(delta) {
-    this.inputs.handleKeyDown();
-    this.magpie.move(); // TODO: incorporate delta
-    this.mothership.move(); // TODO: incorporate delta
-    this.level.move(); // TODO: incorporate delta
+    this.inputs.handleKeyDown(delta);
+    this.magpie.move(delta);
+    this.mothership.move(delta);
+    this.level.move(delta);
     const junk = this.resolveBeam(delta);
     if (junk) {
       junk.caught = true;

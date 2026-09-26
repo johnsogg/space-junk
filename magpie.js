@@ -86,8 +86,8 @@ class Magpie {
     pop();
   }
 
-  move() {
-    this.physics.move({ constrain: true });
+  move(delta) {
+    this.physics.move(delta, { constrain: true });
     if (this.capturedJunk) {
       // Keep the junk's real position in sync with where it's drawn, so game
       // logic (like the mothership pickup) sees it in the right place. Set up

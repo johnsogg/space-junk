@@ -1,6 +1,8 @@
 /**
  * Represents a particle-style physical object with position, velocity, and
- * rotation (in radians)
+ * rotation (in radians). Velocity (dx, dy) is in pixels per second. Methods
+ * that change things over time take `delta`, the milliseconds since the last
+ * frame, so motion is the same speed at any frame rate.
  **/
 class Physics {
   x;
@@ -20,7 +22,7 @@ class Physics {
 
   /**
    * Draws the particle's debugging info: a circle at its position, a thin line
-   * showing where it will be in 30 frames, and a thick line showing its
+   * showing where it will be in half a second, and a thick line showing its
    * direction of travel. Assumes the transform is translated to (x, y) but
    * not rotated, since dx and dy are in screen coordinates.
    **/
@@ -30,8 +32,8 @@ class Physics {
     stroke("#ffffff");
     strokeWeight(1);
     circle(0, 0, 10);
-    const v = createVector(this.dx, this.dy); // current velocity per tick
-    const future = v.copy().mult(30); // velocity in 30 ticks
+    const v = createVector(this.dx, this.dy); // pixels per second
+    const future = v.copy().mult(0.5); // how far it goes in half a second
     line(0, 0, future.x, future.y);
     strokeWeight(2);
     const dir = v.copy().setMag(10);
@@ -40,13 +42,15 @@ class Physics {
   }
 
   /**
-   * Moves the item by adding its current velocity to its position. If the
-   * `constrain` argument is present and truthy, it keeps the item on the
-   * visible portion of canvas by wrapping x and y around.
+   * Moves the item by its velocity times the elapsed time. `delta` is in ms and
+   * velocity is per second, hence the / 1000. If the `constrain` argument is
+   * present and truthy, it keeps the item on the visible portion of canvas by
+   * wrapping x and y around.
    **/
-  move({ constrain = false } = {}) {
-    this.y += this.dy;
-    this.x += this.dx;
+  move(delta, { constrain = false } = {}) {
+    const seconds = delta / 1000;
+    this.x += this.dx * seconds;
+    this.y += this.dy * seconds;
     if (constrain) {
       // When position is constrained, shift the values back into view
       // by multiples of the width/height, either right or left.
@@ -57,17 +61,22 @@ class Physics {
     }
   }
 
-  /** Add the given amount to the current rotation, in radians. */
-  rotate(amt) {
-    this.rotation += amt;
+  /**
+   * Turn at the given rate (radians per second) for `delta` ms. Positive is
+   * clockwise.
+   **/
+  rotate(rate, delta) {
+    this.rotation += rate * (delta / 1000);
   }
 
   /**
-   * Add the given amount to the current velocity in the 'forward' direction.
-   * This depends on the current rotation. It is intended for entities like
-   * ships that have a clear 'up' or 'forward' direction.
+   * Speed up in the 'forward' direction at the given rate (pixels per second,
+   * per second) for `delta` ms. This depends on the current rotation. It is
+   * intended for entities like ships that have a clear 'up' or 'forward'
+   * direction.
    */
-  thrust(amt) {
+  thrust(accel, delta) {
+    const amt = accel * (delta / 1000);
     this.dx = this.dx + sin(this.rotation) * amt;
     this.dy = this.dy + cos(this.rotation) * -amt;
   }

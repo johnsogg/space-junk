@@ -8,8 +8,8 @@ class Junk {
     this.physics = new Physics();
     this.physics.x = random(0, width);
     this.physics.y = random(0, height);
-    this.physics.dx = random(-0.2, 0.2);
-    this.physics.dy = random(-0.2, 0.2);
+    this.physics.dx = random(-12, 12); // pixels per second
+    this.physics.dy = random(-12, 12);
     this.beamTime = 0;
     this.caught = false;
   }
@@ -40,7 +40,7 @@ class Junk {
     pop();
   }
 
-  move() {
-    this.physics.move({ constrain: true });
+  move(delta) {
+    this.physics.move(delta, { constrain: true });
   }
 }

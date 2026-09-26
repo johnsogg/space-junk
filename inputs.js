@@ -6,19 +6,24 @@ class Inputs {
     this.magpie = magpie;
   }
 
-  /** WASD for movement, space for tractor beam */
-  handleKeyDown() {
+  /**
+   * WASD for movement, space for tractor beam. `delta` is the ms since the last
+   * frame, so holding a key has the same effect at any frame rate.
+   **/
+  handleKeyDown(delta) {
+    // thrust is in pixels per second, per second
     if (keyIsDown("w")) {
-      this.magpie.physics.thrust(0.1);
+      this.magpie.physics.thrust(360, delta);
     }
     if (keyIsDown("s")) {
-      this.magpie.physics.thrust(-0.05);
+      this.magpie.physics.thrust(-180, delta);
     }
+    // turning is in radians per second
     if (keyIsDown("a")) {
-      this.magpie.physics.rotate(-0.04);
+      this.magpie.physics.rotate(-2.4, delta);
     }
     if (keyIsDown("d")) {
-      this.magpie.physics.rotate(0.04);
+      this.magpie.physics.rotate(2.4, delta);
     }
     if (keyIsDown("Space")) {
       this.magpie.enableBeam(true);
