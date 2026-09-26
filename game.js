@@ -31,6 +31,9 @@ class Game {
   /** Total game score */
   score;
 
+  /** When true, nothing moves and the timer stops. Set by sketch.js. */
+  paused;
+
   /**
    * Create a Game instance. Importantly, constructors can't be async, so we
    * will not use this directly, but instead defer to Game.load(), which will
@@ -63,6 +66,7 @@ class Game {
     this.debug = false;
 
     this.score = 0;
+    this.paused = false;
   }
 
   static async load() {
@@ -119,6 +123,22 @@ class Game {
     this.level.draw();
     this.mothership.draw();
     this.magpie.draw();
+    if (this.paused) {
+      Game.drawPaused();
+    }
+  }
+
+  /** Dims the whole canvas and writes "Paused" in the middle. */
+  static drawPaused() {
+    push();
+    noStroke();
+    fill("#000000a0");
+    rect(0, 0, width, height);
+    fill("#ffffff");
+    textAlign(CENTER, CENTER);
+    textSize(32);
+    text("Paused", width / 2, height / 2);
+    pop();
   }
 
   updateScore(reason) {

@@ -71,11 +71,13 @@ Script order doesn't matter much, because nothing runs until p5 calls
 `setup()`.
 
 - **`sketch.js`**: the single `game` global. `async setup()` creates the
-  canvas, then `game = await Game.load()`. `draw()` clears the background, then
-  calls `game.move(deltaTime)` and `game.draw()`.
+  canvas, then `game = await Game.load()`, then adds window `blur`/`focus`
+  listeners that set `game.paused`. `draw()` clears the background, calls
+  `game.move(deltaTime)` unless paused, then `game.draw()`.
 - **`game.js`**: `Game` ties everything together. It holds `levels` (all level
-  configs), `levelIdx`, `level` (the loaded `Level`), `magpie`, `inputs`, and
-  `debug`. Constructors can't be async, so the static `async load()` fetches
+  configs), `levelIdx`, `level` (the loaded `Level`), `magpie`, `mothership`,
+  `inputs`, `debug`, `score`, and `paused`. `draw()` dims the screen and shows
+  "Paused" when paused. Constructors can't be async, so the static `async load()` fetches
   `./levels.json` and returns `new Game({ levels })`. The constructor loads
   level 0 and places the Magpie at a random spot in the middle half of the
   screen with a random rotation, and the Mothership the same way with a slow
@@ -87,9 +89,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
 - **`mothership.js`**: `Mothership` is a rectangle with a `physics` and a
   `PICKUP_DIAMETER` circle, drawn in debug mode.
 - **`level.js`**: `Level` is built from one `levels.json` entry. It holds the
-  `name`, the `junk` array, and `time` (`{ initial, startedAt }`).
+  `name`, the `junk` array, and `time` (`{ initial, elapsed }`).
   `timeLeft()` returns the remaining ms. `draw()` draws the timer text, then the
-  junk. `move()` moves the junk.
+  junk. `move(delta)` adds `delta` to `time.elapsed` and moves the junk.
 - **`physics.js`**: `Physics` holds `x`, `y`, `dx`, `dy`, and `rotation`
   (radians). Velocity is in pixels per second. `move(delta, { constrain })`
   adds velocity × elapsed time to position and, if `constrain`, wraps the
@@ -173,8 +175,14 @@ Script order doesn't matter much, because nothing runs until p5 calls
   calls `preventDefault()`, so returning it for every key breaks browser
   shortcuts like Cmd-R. Scroll keys are still swallowed so the game doesn't
   scroll a parent page when embedded in an iframe.
-- **Timers use wall-clock time:** remaining = `initial - (millis() - startedAt)`.
-  `millis()` is the time since the sketch started, not per frame.
+- **Timers use game time, not wall-clock time:** the level adds `delta` to
+  `time.elapsed` in `move()`, and remaining = `initial - elapsed`. Anything
+  that skips `move()`, like pausing, stops the timer for free. Don't use
+  `millis()` for game timers; it keeps counting while paused.
+- **Pausing is a flag, not `noLoop()`.** `sketch.js` skips `game.move()` while
+  `game.paused` is set, but still draws, so the frozen scene and the "Paused"
+  overlay stay on screen. It pauses on window `blur` (switching tabs or apps)
+  and resumes on `focus`.
 - **Held keys are polled with `keyIsDown()` every frame**, not handled with key
   callbacks, which only repeat at the OS key-repeat rate. One-shot toggles
   (like debug) use `keyPressed()`.
@@ -207,10 +215,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
 - There's no `windowResized()`. The canvas keeps its starting size when the
   window changes, and wrapping uses that size.
 - The timer counts down to `0:00`, but nothing happens when it gets there.
-- **Pause and huge deltas.** When the tab loses focus, p5 stops calling
-  `draw()`. When you come back, the first `deltaTime` can be several seconds
-  long. That one frame could fully capture junk under the beam, drain every
-  capture meter at once, or jump every object several seconds along its path.
-  Clamp the delta in `sketch.js`, e.g. `Math.min(deltaTime, 50)`. Related: add
-  a real pause, and decide whether the level timer should stop during it. It
-  currently uses `millis()`, so it keeps running.
+- **Clamp huge deltas.** When a tab is hidden, the browser stops calling
+  `draw()`. Pausing doesn't fix this. On `focus` the game unpauses, and the next
+  `deltaTime` covers the whole time the tab was hidden, possibly many seconds.
+  That one frame could fully capture junk under the beam, drain every capture
+  meter at once, or jump every object several seconds along its path. Clamp the
+  delta in `sketch.js`, e.g. `Math.min(deltaTime, 50)`.

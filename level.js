@@ -15,14 +15,13 @@ class Level {
     }
     this.time = {
       initial: levelConfig.time,
-      startedAt: millis(),
+      elapsed: 0,
     };
   }
 
   /** Give the remaining time for this level in milliseconds. */
   timeLeft() {
-    const elapsed = millis() - this.time.startedAt;
-    return Math.max(0, this.time.initial - elapsed); // in milliseconds
+    return Math.max(0, this.time.initial - this.time.elapsed);
   }
 
   /**
@@ -43,6 +42,9 @@ class Level {
 
   /** Moves anything owned by the level (junk, comets, etc). */
   move(delta) {
+    // the timer counts game time, not wall-clock time, so it stops whenever
+    // move() isn't called (e.g. while paused)
+    this.time.elapsed += delta;
     for (const junk of this.junk) {
       if (!junk.caught) {
         junk.move(delta);
