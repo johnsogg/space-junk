@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "checkJs": false
+  },
+  "include": ["*.js", "node_modules/p5/types/global.d.ts"]
+}

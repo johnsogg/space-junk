@@ -1,0 +1,25 @@
+{
+  "name": "space-junk",
+  "version": "1.0.0",
+  "description": "This is my implementation of the space junk homework assignment for my CF1 class.",
+  "main": "magpie.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnsogg/space-junk.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/johnsogg/space-junk/issues"
+  },
+  "homepage": "https://github.com/johnsogg/space-junk#readme",
+  "devDependencies": {
+    "eslint": "^10.11.0",
+    "p5": "^2.3.2"
+  }
+}

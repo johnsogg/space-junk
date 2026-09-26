@@ -1,69 +1,165 @@
-# p5 vanilla starter
+# Space Junk
 
-> Feel free to delete all of this README's text and replace it with your
-> own.
+My reference solution to the Space Junk homework for my CF1 class. It is a work
+in progress. This README is a working note for picking the project back up; it
+will be rewritten later.
 
-A minimal starting point for a [p5.js](https://p5js.org/) sketch, meant to
-be used the same way you'd use the online editor at editor.p5js.org — just
-locally, in your own editor and browser.
+The spec lives in the course book repo:
+`../2026-cf1-cf2-rebuild/book/src/units/homework/chapters/space-junk-game/sections/description.mdx`
 
-It contains exactly three files: `index.html`, `sketch.js`, and
-`style.css`. No `npm install`, no build step, no framework — open the
-folder and start editing `sketch.js`.
+## The game
 
-## Getting started
+You fly a small ship, the **Magpie**. You use its tractor beam to grab floating
+**space junk** and carry it to a cargo ship, the **Mothership**. The Mothership
+pulls in junk that stays inside its field for `timeToGrabJunk` ms. When all the
+junk is collected, you move on to the next level. You score points for junk,
+with a bonus for speed, and for completing levels. If the **timer** (counting
+down from `mapStartingTime`) runs out, you lose a Magpie. The game is over when
+you run out of Magpies (`maxNumLives`). Later levels add **comets** and a
+**star** that destroy the Magpie on contact.
 
-1. Click **Use this template** on GitHub (or `git clone` this repo) to get
-   your own copy.
-2. Open the folder in VS Code.
-3. VS Code will prompt you to install the recommended **Live Server**
-   extension — install it (only needed once).
-4. Right-click `index.html` and choose **Open with Live Server**, or click
-   **Go Live** in the bottom-right corner of the VS Code window.
-5. Your sketch opens in a browser tab and reloads automatically every time
-   you save `sketch.js`.
+The map is black and wraps around at every edge: anything that overlaps an edge
+also appears on the opposite side, including at the corners.
 
-You can also just double-click `index.html` to open it directly in a
-browser without Live Server — that works fine for a simple sketch, but
-Live Server is worth using once your sketch loads other files (images,
-fonts, JSON, etc.), since browsers block those requests from a page opened
-directly off disk.
+**Phase 1** (currently "enough for full credit" in the spec): Magpie,
+Mothership, junk, timer, score, lives, and edge wrapping. Comets and the star
+come after Phase 1.
 
-## Debugging with DevTools
+> **Plan: re-phase the spec.** Phase 1 as written is too ambitious and will
+> frustrate students. Edge wrapping in particular is too complex for it: it
+> needs both position wrapping and drawing nine copies with `drawEverywhere`.
+> Move wrapping to a later phase. When fleshing out the description, break it
+> into bite-size phases, each with a worked example. The worked examples will
+> be reverse-engineered from this repo, so this repo should be a complete,
+> working game before going back to the book.
 
-This is the main advantage over the online editor: you get real browser
-developer tools.
+### Controls
 
-1. Open your sketch in Chrome.
-2. Open DevTools (`Cmd+Option+I` on Mac, `Ctrl+Shift+I` on Windows/Linux).
-3. Go to the **Sources** tab, find `sketch.js` in the file tree on the
-   left, and click a line number to set a breakpoint.
-4. Reload the page. Execution will pause at your breakpoint, and you can
-   inspect variables, step through code line by line, and use the
-   Console to poke at live values — all standard browser debugging, now
-   available on your own code.
+- `w` thrust forward, `s` reverse thrust
+- `a` rotate counter-clockwise, `d` rotate clockwise
+- Hold `Space` for the tractor beam
+- `~` or `` ` `` toggles debug graphics (not in the spec)
 
-## Previewing inside VS Code (optional)
+## Current state
 
-VS Code has a built-in browser you can use instead of switching to a
-separate window. This only works in VS Code (not other editors, and not
-in forks like VSCodium or Cursor that strip it out):
+Working: the Magpie flies (thrust, reverse, rotate, drift) and shows its beam
+while Space is held. Junk drifts slowly. Everything wraps at the edges. The
+level timer counts down. Debug graphics toggle on and off.
 
-1. Open the Command Palette (`Cmd+Shift+P`).
-2. Run **Browser: Open Integrated Browser**.
-3. Enter the Live Server URL (e.g. `http://localhost:5500/`).
+Not built yet: the Mothership, grabbing and delivering junk, score, lives,
+level progression, anything happening at the end of the timer, comets, and the
+star.
 
-It even has full DevTools, including breakpoints — but Chrome or Edge is
-still the more reliable choice for debugging, since that's what you'll be
-using for every other web project in the course.
+## Running it
 
-## About the p5 version
+These are plain p5.js files with no build step. p5 2.3.2 is loaded from a CDN in
+`index.html`. The page must be served over HTTP, not opened as `file://`,
+because `loadJSON` uses `fetch`. Use the VS Code **Live Server** extension
+(port 5500).
 
-`index.html` loads p5.js and p5.sound.js from a CDN
-([jsdelivr](https://www.jsdelivr.com/)), pinned to specific versions
-(p5.js `2.3.2`, p5.sound `0.4.1`) so your sketch behaves the same locally
-as it does anywhere else in the course. As of p5.js v2, sound is a
-separate package with its own version number, rather than bundled
-alongside the main library — the two `<script src="...">` URLs at the top
-of `index.html` are versioned independently, so update whichever one
-you need if a later assignment requires a newer release.
+`npm install` is optional. It only provides editor support: the p5 type
+definitions for autocomplete (through `jsconfig.json`) and ESLint. The game
+itself never uses `node_modules`.
+
+## Code layout
+
+Every file is a global `<script>` loaded in `index.html`, with no ES modules.
+Script order doesn't matter much, because nothing runs until p5 calls
+`setup()`.
+
+- **`sketch.js`**: the single `game` global. `async setup()` creates the
+  canvas, then `game = await Game.load()`. `draw()` clears the background, then
+  calls `game.move()` and `game.draw()`.
+- **`game.js`**: `Game` ties everything together. It holds `levels` (all level
+  configs), `levelIdx`, `level` (the loaded `Level`), `magpie`, `inputs`, and
+  `debug`. Constructors can't be async, so the static `async load()` fetches
+  `./levels.json` and returns `new Game({ levels })`. The constructor loads
+  level 0 and places the Magpie at a random spot in the middle half of the
+  screen with a random rotation. `move()` applies input, then moves the Magpie
+  and the level. `draw()` draws the level, then the Magpie.
+- **`level.js`**: `Level` is built from one `levels.json` entry. It holds the
+  `name`, the `junk` array, and `time` (`{ initial, startedAt }`).
+  `timeLeft()` returns the remaining ms. `draw()` draws the timer text, then the
+  junk. `move()` moves the junk.
+- **`physics.js`**: `Physics` holds `x`, `y`, `dx`, `dy`, and `rotation`
+  (radians). `move({ constrain })` adds velocity to position and, if
+  `constrain`, wraps the position into `[0, width)` × `[0, height)`.
+  `rotate(amt)` turns it. `thrust(amt)` pushes along the facing direction.
+  `draw()` draws debug graphics: a circle, a thin line to where the object will
+  be in 30 frames, and a thick 10px direction line.
+- **`magpie.js`**: `Magpie` holds a `physics` and a `beam` flag. The static
+  `drawMagpie()` draws the ship at the origin (beam triangle, dome, platform,
+  window).
+- **`junk.js`**: `Junk` is a circle with a random position and a slow random
+  drift.
+- **`inputs.js`**: `Inputs.handleKeyDown()` checks `keyIsDown()` for WASD and
+  Space, and applies them to the Magpie. The global `keyPressed()` toggles
+  `game.debug` on `~` or backtick (guarded, since `game` is undefined until
+  `load()` finishes). It returns `false` only for keys in `SCROLL_KEYS` (Space
+  and the arrows).
+- **`utils.js`**: `drawEverywhere({ offset, drawFn })` draws 9 copies (3×3
+  grid) for wrapping. `timeToStringParts(ms)` returns `{ minutes, seconds }`
+  strings, like `"4"` and `"03"`.
+- **`levels.json`**: an array of level configs, `{ name, junk, time }`. `junk`
+  is a count and `time` is in ms.
+
+## Conventions and decisions
+
+- **Frame order:** input → move → draw. Within drawing, the level (timer, then
+  junk) comes before the Magpie, so the timer is under everything, as the spec
+  requires.
+- **Rotation 0 means the ship faces up (−y).** Positive rotation turns
+  clockwise, because y points down on screen. Forward is
+  `(sin(r), -cos(r))`.
+- **Velocity is in screen coordinates.** Rotation only changes the direction of
+  thrust, which gives Asteroids-style drift.
+- **Wrapping takes two things:** the position must wrap (`Physics.move` with
+  `constrain`), and the object must be drawn with `drawEverywhere`. Nine copies
+  are needed to cover the corners, not five.
+- **Wrap with `while` loops, not `%`.** JavaScript's `%` keeps the sign of the
+  left side, so `-5 % 800` is `-5`, not `795`. The loops read the same way the
+  idea does: "off the left edge, shift right one screen."
+- **`drawFn` draws around the origin (0, 0).** `drawEverywhere` has already
+  translated to the object's position.
+- **Debug graphics:** each object's `drawFn` calls `this.physics.draw()` when
+  `game.debug` is on, after the object draws itself. At that point the
+  transform is translated but not rotated, which `Physics.draw` expects,
+  because `dx` and `dy` are in screen coordinates.
+- **Only swallow the keys you mean to.** A p5 key handler that returns `false`
+  calls `preventDefault()`, so returning it for every key breaks browser
+  shortcuts like Cmd-R. Scroll keys are still swallowed so the game doesn't
+  scroll a parent page when embedded in an iframe.
+- **Timers use wall-clock time:** remaining = `initial - (millis() - startedAt)`.
+  `millis()` is the time since the sketch started, not per frame.
+- **Held keys are polled with `keyIsDown()` every frame**, not handled with key
+  callbacks, which only repeat at the OS key-repeat rate. One-shot toggles
+  (like debug) use `keyPressed()`.
+- **Levels are declarative JSON.** Keep data in `levels.json` and have `Level`
+  create the objects from it.
+- **Names to avoid:** the global `map` (hides p5's `map()`) and the class `Map`
+  (replaces JavaScript's built-in `Map`).
+
+## Tooling
+
+- `.prettierrc` plus `.vscode/settings.json`: 2-space indentation, format on
+  save with Prettier, and `detectIndentation` turned off so the indent-rainbow
+  extension agrees with Prettier.
+- `jsconfig.json` includes `node_modules/p5/types/global.d.ts`, so p5 globals
+  autocomplete. Don't use `@types/p5`; it only covers p5 1.x.
+- `eslint.config.mjs` has one rule: `no-restricted-syntax` bans `for...in`
+  (use `for...of`). It does not have `no-undef`, so it won't catch assignments
+  to undeclared names.
+- p5 2.x details: there is no `preload()` (use `async setup()` with `await`),
+  `draw()` doesn't start until an async `setup()` finishes, and `keyIsDown()`
+  takes strings (`"w"`, `"KeyW"`, `"Space"`), not numeric keycodes.
+
+## Known issues / TODO
+
+- `sketch.js` still has the commented-out `let` lines from before the `Game`
+  refactor.
+- `Level.draw()`'s doc comment mentions lives and score, which it doesn't draw.
+- The timer is drawn in p5's default small text. The spec asks for large,
+  easy-to-read text.
+- There's no `windowResized()`. The canvas keeps its starting size when the
+  window changes, and wrapping uses that size.
+- The timer counts down to `0:00`, but nothing happens when it gets there.
