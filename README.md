@@ -73,7 +73,8 @@ Script order doesn't matter much, because nothing runs until p5 calls
 - **`sketch.js`**: the single `game` global. `async setup()` creates the
   canvas, then `game = await Game.load()`, then adds window `blur`/`focus`
   listeners that set `game.paused`. `draw()` clears the background, calls
-  `game.move(deltaTime)` unless paused, then `game.draw()`.
+  `game.move()` with `deltaTime` capped at `MAX_DELTA_MS` unless paused, then
+  `game.draw()`.
 - **`game.js`**: `Game` ties everything together. It holds `levels` (all level
   configs), `levelIdx`, `level` (the loaded `Level`), `magpie`, `mothership`,
   `inputs`, `debug`, `score`, and `paused`. `draw()` dims the screen and shows
@@ -183,6 +184,12 @@ Script order doesn't matter much, because nothing runs until p5 calls
   `game.paused` is set, but still draws, so the frozen scene and the "Paused"
   overlay stay on screen. It pauses on window `blur` (switching tabs or apps)
   and resumes on `focus`.
+- **`delta` is clamped to `MAX_DELTA_MS` (50) in `sketch.js`.** When a tab is
+  hidden, the browser stops calling `draw()`, so pausing alone isn't enough.
+  On `focus` the game unpauses, and the next `deltaTime` covers the whole time
+  the tab was hidden. Unclamped, that one frame would jump every object
+  seconds along its path and finish every capture timer at once. The cost:
+  below 20 fps the game runs in slow motion instead of skipping ahead.
 - **Held keys are polled with `keyIsDown()` every frame**, not handled with key
   callbacks, which only repeat at the OS key-repeat rate. One-shot toggles
   (like debug) use `keyPressed()`.
@@ -215,9 +222,3 @@ Script order doesn't matter much, because nothing runs until p5 calls
 - There's no `windowResized()`. The canvas keeps its starting size when the
   window changes, and wrapping uses that size.
 - The timer counts down to `0:00`, but nothing happens when it gets there.
-- **Clamp huge deltas.** When a tab is hidden, the browser stops calling
-  `draw()`. Pausing doesn't fix this. On `focus` the game unpauses, and the next
-  `deltaTime` covers the whole time the tab was hidden, possibly many seconds.
-  That one frame could fully capture junk under the beam, drain every capture
-  meter at once, or jump every object several seconds along its path. Clamp the
-  delta in `sketch.js`, e.g. `Math.min(deltaTime, 50)`.

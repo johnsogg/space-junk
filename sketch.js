@@ -1,5 +1,13 @@
 let game;
 
+/**
+ * The longest frame the game will simulate, in ms. After a tab has been
+ * hidden, the first deltaTime can cover the whole time away (many seconds),
+ * which would jump everything along its path and finish every timer at once.
+ * 50ms is a 20 fps frame; below that, the game runs in slow motion instead.
+ **/
+const MAX_DELTA_MS = 50;
+
 /** Establish all the game elements and loads the first level. */
 async function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -16,7 +24,7 @@ function draw() {
   // move all game elements first, unless paused. Skipping move() freezes
   // everything, including the level timer, since it all runs on delta.
   if (!game.paused) {
-    game.move(deltaTime);
+    game.move(Math.min(deltaTime, MAX_DELTA_MS));
   }
   // then draw all game elements
   game.draw();
