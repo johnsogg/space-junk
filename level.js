@@ -43,7 +43,13 @@ class Level {
   /** Moves anything owned by the level (junk, comets, etc). */
   move() {
     for (const junk of this.junk) {
-      junk.move();
+      if (!junk.caught) {
+        junk.move();
+      }
     }
+  }
+
+  removeJunk(junkToRemove) {
+    this.junk = this.junk.filter((j) => j !== junkToRemove);
   }
 }

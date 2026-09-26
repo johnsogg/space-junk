@@ -7,9 +7,14 @@ class Magpie {
   static BEAM_HEIGHT = 60;
   static WINDOW_WIDTH = Magpie.DOME_WIDTH / 4;
   static WINDOW_HEIGHT = Magpie.DOME_HEIGHT / 4;
+  /** Where captured junk sits, in the Magpie's own frame (inside the beam). */
+  static CARGO_Y = 40;
 
   physics;
   beam;
+
+  /** If we've caught space junk, use a direct reference to draw it. */
+  capturedJunk;
 
   constructor() {
     this.physics = new Physics();
@@ -18,13 +23,22 @@ class Magpie {
 
   draw() {
     push();
-    noStroke();
     // in order to render objects that overlap an edge, we're going to
     // defer to a pure function to render nine copies, one for each cell of
     // a tic-tac-toe, where the middle is our visible canvas.
     drawEverywhere({
       offset: { x: this.physics.x, y: this.physics.y },
       drawFn: () => {
+        // Draw captured junk first so the ship is drawn on top of it. We're
+        // already at the Magpie's center, so use Junk's shape-only draw.
+        // Calling capturedJunk.draw() here would translate a second time.
+        if (this.capturedJunk) {
+          push();
+          rotate(this.physics.rotation);
+          translate(0, Magpie.CARGO_Y);
+          Junk.drawJunk();
+          pop();
+        }
         Magpie.drawMagpie({ physics: this.physics, beam: this.beam });
         if (game.debug) {
           this.physics.draw();
@@ -74,6 +88,50 @@ class Magpie {
 
   move() {
     this.physics.move({ constrain: true });
+    if (this.capturedJunk) {
+      // Keep the junk's real position in sync with where it's drawn, so game
+      // logic (like the mothership pickup) sees it in the right place. Set up
+      // the Magpie's frame, then ask where the cargo spot is on the canvas.
+      push();
+      translate(this.physics.x, this.physics.y);
+      rotate(this.physics.rotation);
+      const cargo = worldToScreen(0, Magpie.CARGO_Y);
+      pop();
+      this.capturedJunk.physics.x = cargo.x;
+      this.capturedJunk.physics.y = cargo.y;
+    }
+  }
+
+  /**
+   * True when the beam is on and the given canvas point is inside the beam's
+   * triangle. Uses drawEverywhere so the wrapped copies of the beam near the
+   * canvas edges count too.
+   **/
+  beamContains({ x, y }) {
+    // if the beamis off, bail out.
+    if (!this.beam) {
+      return false;
+    }
+    let inside = false;
+    // the drawEverywhere function doesn't actually have to draw anything! Here
+    // we're reusing it with a different 'draw' function that actually tests
+    // if the x/y location is inside the beam triangle, and returns true/false.
+    drawEverywhere({
+      offset: this.physics,
+      drawFn: () => {
+        rotate(this.physics.rotation);
+        // Convert the canvas point into the Magpie's own frame: as if the
+        // Magpie sat at (0, 0) pointing up, which is how drawMagpie draws the
+        // beam. The beam's top point is at (0, 0) and it widens as y grows.
+        const p = screenToWorld(x, y);
+        const halfWidth = (p.y / Magpie.BEAM_HEIGHT) * (Magpie.BEAM_WIDTH / 2);
+        const withinDepth = p.y >= 0 && p.y <= Magpie.BEAM_HEIGHT;
+        if (withinDepth && Math.abs(p.x) <= halfWidth) {
+          inside = true;
+        }
+      },
+    });
+    return inside;
   }
 
   enableBeam(v) {

@@ -9,7 +9,7 @@ async function setup() {
 function draw() {
   background(0);
   // move all game elements first
-  game.move();
+  game.move(deltaTime);
   // then draw all game elements
   game.draw();
 }

@@ -2,6 +2,7 @@ class Junk {
   static DIAMETER = 20;
 
   physics;
+  beamTime;
 
   constructor() {
     this.physics = new Physics();
@@ -9,6 +10,8 @@ class Junk {
     this.physics.y = random(0, height);
     this.physics.dx = random(-0.2, 0.2);
     this.physics.dy = random(-0.2, 0.2);
+    this.beamTime = 0;
+    this.caught = false;
   }
 
   draw() {
@@ -16,16 +19,24 @@ class Junk {
     drawEverywhere({
       offset: this.physics,
       drawFn: () => {
-        push();
-        noStroke();
-        fill("#a0936a");
-        circle(0, 0, Junk.DIAMETER);
-        pop();
+        Junk.drawJunk();
         if (game.debug) {
           this.physics.draw();
         }
       },
     });
+    pop();
+  }
+
+  /**
+   * Draws the junk's shape around (0, 0). Assumes the caller has already
+   * moved the transform to wherever the junk should appear.
+   **/
+  static drawJunk() {
+    push();
+    noStroke();
+    fill("#a0936a");
+    circle(0, 0, Junk.DIAMETER);
     pop();
   }
 

@@ -44,7 +44,7 @@ class Physics {
    * `constrain` argument is present and truthy, it keeps the item on the
    * visible portion of canvas by wrapping x and y around.
    **/
-  move({ constrain }) {
+  move({ constrain = false } = {}) {
     this.y += this.dy;
     this.x += this.dx;
     if (constrain) {

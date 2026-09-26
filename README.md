@@ -43,12 +43,15 @@ come after Phase 1.
 ## Current state
 
 Working: the Magpie flies (thrust, reverse, rotate, drift) and shows its beam
-while Space is held. Junk drifts slowly. Everything wraps at the edges. The
-level timer counts down. Debug graphics toggle on and off.
+while Space is held. Junk drifts slowly. The Mothership drifts and draws, with
+its pickup circle in debug mode. Junk held in the beam for
+`Game.JUNK_CATCH_TIME_MS` is captured and rides in the beam. Everything wraps at
+the edges. The level timer counts down. Debug graphics toggle on and off.
 
-Not built yet: the Mothership, grabbing and delivering junk, score, lives,
-level progression, anything happening at the end of the timer, comets, and the
-star.
+In progress: releasing captured junk and delivering it to the Mothership.
+
+Not built yet: score, lives, level progression, anything happening at the end
+of the timer, comets, and the star.
 
 ## Running it
 
@@ -69,14 +72,20 @@ Script order doesn't matter much, because nothing runs until p5 calls
 
 - **`sketch.js`**: the single `game` global. `async setup()` creates the
   canvas, then `game = await Game.load()`. `draw()` clears the background, then
-  calls `game.move()` and `game.draw()`.
+  calls `game.move(deltaTime)` and `game.draw()`.
 - **`game.js`**: `Game` ties everything together. It holds `levels` (all level
   configs), `levelIdx`, `level` (the loaded `Level`), `magpie`, `inputs`, and
   `debug`. Constructors can't be async, so the static `async load()` fetches
   `./levels.json` and returns `new Game({ levels })`. The constructor loads
   level 0 and places the Magpie at a random spot in the middle half of the
-  screen with a random rotation. `move()` applies input, then moves the Magpie
-  and the level. `draw()` draws the level, then the Magpie.
+  screen with a random rotation, and the Mothership the same way with a slow
+  drift. `move(delta)` applies input, moves the Magpie, Mothership, and level,
+  then calls `resolveBeam(delta)`. That adds or drains each junk's `beamTime`
+  and returns the in-beam junk with the most `beamTime` once it passes
+  `JUNK_CATCH_TIME_MS`. `move` then hands that junk to the Magpie and removes
+  it from the level. `draw()` draws the level, Mothership, then Magpie.
+- **`mothership.js`**: `Mothership` is a rectangle with a `physics` and a
+  `PICKUP_DIAMETER` circle, drawn in debug mode.
 - **`level.js`**: `Level` is built from one `levels.json` entry. It holds the
   `name`, the `junk` array, and `time` (`{ initial, startedAt }`).
   `timeLeft()` returns the remaining ms. `draw()` draws the timer text, then the
@@ -87,11 +96,18 @@ Script order doesn't matter much, because nothing runs until p5 calls
   `rotate(amt)` turns it. `thrust(amt)` pushes along the facing direction.
   `draw()` draws debug graphics: a circle, a thin line to where the object will
   be in 30 frames, and a thick 10px direction line.
-- **`magpie.js`**: `Magpie` holds a `physics` and a `beam` flag. The static
-  `drawMagpie()` draws the ship at the origin (beam triangle, dome, platform,
-  window).
+- **`magpie.js`**: `Magpie` holds a `physics`, a `beam` flag, and
+  `capturedJunk` (a `Junk` or nothing). The static `drawMagpie()` draws the
+  ship at the origin (beam triangle, dome, platform, window). `draw()` draws the
+  captured junk at `(0, CARGO_Y)` in the ship's frame, under the ship.
+  `move()` also updates the captured junk's real position with
+  `worldToScreen`. `beamContains({ x, y })` tests a canvas point against the
+  beam triangle with `screenToWorld`, running through `drawEverywhere` so
+  wrapped copies of the beam count.
 - **`junk.js`**: `Junk` is a circle with a random position and a slow random
-  drift.
+  drift. `beamTime` (ms) is how long it has been in the beam, and it drains
+  when the junk is out of the beam. The static `drawJunk()` draws the shape at
+  the origin.
 - **`inputs.js`**: `Inputs.handleKeyDown()` checks `keyIsDown()` for WASD and
   Space, and applies them to the Magpie. The global `keyPressed()` toggles
   `game.debug` on `~` or backtick (guarded, since `game` is undefined until
@@ -121,6 +137,24 @@ Script order doesn't matter much, because nothing runs until p5 calls
   idea does: "off the left edge, shift right one screen."
 - **`drawFn` draws around the origin (0, 0).** `drawEverywhere` has already
   translated to the object's position.
+- **Two kinds of draw functions.** An instance `draw()` expects a clean canvas
+  and places itself with `drawEverywhere`. A static `drawX()` (`drawMagpie`,
+  `drawJunk`) expects the transform to already be at the object's center and
+  draws around (0, 0). **Never call a `draw()` from inside another
+  `drawEverywhere`**: it translates a second time, and with 81 copies, all in
+  the wrong place, the object seems to vanish with no error. To draw one thing
+  attached to another (junk in the beam), call the static shape draw from
+  inside the parent's callback.
+- **Screen vs. world in p5:** p5's "world" means the current transformed frame,
+  and "screen" means canvas pixels. To move between a ship's frame and the
+  canvas, `push()`, `translate`/`rotate` exactly as the draw code does, call
+  `worldToScreen` (frame → canvas) or `screenToWorld` (canvas → frame), then
+  `pop()`. This only gives correct results where the transform starts clean,
+  like `game.move()`, which runs before any drawing.
+- **Attached objects have two positions to keep in sync.** Captured junk is
+  drawn from `Magpie.CARGO_Y` in the ship's frame, and its `physics` is set from
+  the same constant in `Magpie.move()`. If those drift apart, what you see and
+  what the game logic uses stop matching.
 - **Debug graphics:** each object's `drawFn` calls `this.physics.draw()` when
   `game.debug` is on, after the object draws itself. At that point the
   transform is translated but not rotated, which `Physics.draw` expects,
@@ -163,3 +197,14 @@ Script order doesn't matter much, because nothing runs until p5 calls
 - There's no `windowResized()`. The canvas keeps its starting size when the
   window changes, and wrapping uses that size.
 - The timer counts down to `0:00`, but nothing happens when it gets there.
+- **Pause and huge deltas.** When the tab loses focus, p5 stops calling
+  `draw()`. When you come back, the first `deltaTime` can be several seconds
+  long. That one frame could fully capture junk under the beam or drain every
+  capture meter at once. Clamp the delta in `sketch.js`, e.g.
+  `Math.min(deltaTime, 50)`. Related: add a real pause, and decide whether the
+  level timer should stop during it. It currently uses `millis()`, so it keeps
+  running.
+- **Thread `delta` (ms) through every `move()`.** `Game.move` →
+  `resolveBeam(delta)` is being built first. After that, make the other `move()`
+  methods take `delta` so they're consistent. Only `sketch.js` should read p5's
+  `deltaTime` global (Godot's `_process(delta)`, but in ms).
