@@ -15,8 +15,12 @@ async function setup() {
   // Pause when the window loses focus (switching tabs or apps), and resume
   // when it comes back. p5 has no built-in for this, so use the browser's
   // own window events.
-  window.addEventListener("blur", () => (game.paused = true));
-  window.addEventListener("focus", () => (game.paused = false));
+  window.addEventListener("blur", () => {
+    game.paused = true;
+  });
+  window.addEventListener("focus", () => {
+    game.paused = false;
+  });
 }
 
 function draw() {

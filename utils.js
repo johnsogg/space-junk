@@ -42,7 +42,6 @@ function wrappedDist(a, b) {
   let dy = Math.abs(a.y - b.y);
   dx = Math.min(dx, width - dx);
   dy = Math.min(dy, height - dy);
-  // use p5's dist; get distance from origin to dx,dy. We could have also used
-  // the built-in Math.hypot function to get a hypotenuse.
-  return dist(0, 0, dx, dy);
+  // Math.hypot gives the hypotenuse: the straight-line distance for dx, dy.
+  return Math.hypot(dx, dy);
 }
