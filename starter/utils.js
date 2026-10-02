@@ -16,16 +16,17 @@ function drawEverywhere({ offset, drawFn }) {
 /**
  * A stand-in shape for things you haven't drawn yet: an outlined rectangle
  * with a line pointing 'forward', so you can see which way it is rotated.
- * Draws around (0, 0).
+ * Draws around (0, 0). The size is `w` by `h`, not `width` and `height`,
+ * because those names are already p5's canvas size.
  **/
-function drawPlaceholder({ rotation, width, height }) {
+function drawPlaceholder({ rotation, w, h }) {
   push();
   rotate(rotation);
   noFill();
   stroke("#ffffff");
   rectMode(CENTER);
-  rect(0, 0, width, height);
-  line(0, 0, 0, -height);
+  rect(0, 0, w, h);
+  line(0, 0, 0, -h);
   pop();
 }
 

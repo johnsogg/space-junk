@@ -40,8 +40,8 @@ class Mothership {
     // middle. Draw it around (0, 0), rotated by `rotation`.
     drawPlaceholder({
       rotation,
-      width: Mothership.WIDTH,
-      height: Mothership.HEIGHT,
+      w: Mothership.WIDTH,
+      h: Mothership.HEIGHT,
     });
   }
 

@@ -60,8 +60,8 @@ class Magpie {
     // Magpie.BEAM_HEIGHT long and Magpie.BEAM_WIDTH wide at the far end.
     drawPlaceholder({
       rotation,
-      width: Magpie.DOME_WIDTH,
-      height: Magpie.DOME_HEIGHT,
+      w: Magpie.DOME_WIDTH,
+      h: Magpie.DOME_HEIGHT,
     });
   }
 

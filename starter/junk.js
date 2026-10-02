@@ -42,8 +42,8 @@ class Junk {
     // Junk.DIAMETER across, centered on (0, 0).
     drawPlaceholder({
       rotation: 0,
-      width: Junk.DIAMETER,
-      height: Junk.DIAMETER,
+      w: Junk.DIAMETER,
+      h: Junk.DIAMETER,
     });
   }
 

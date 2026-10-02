@@ -25,8 +25,15 @@ drift apart silently. In particular:
 - If you change what a phase asks for, update the matching worked example in
   the book.
 
-A quick check: replace each stub with the reference's method body. The game
-should then play exactly like the reference does for one level, without wrapping.
+A quick check: run `node scripts/make-phase-builds.js` from the repo root. It
+copies the reference's method bodies into the stubs, one phase at a time, and
+stops with an error if a stub has no matching method in the reference. The
+results land in `phase-builds/phase-1` through `phase-5` (gitignored). Each
+one shows the game as it should look at the end of that phase. Open one with
+Live Server to check it or take screenshots. `phase-5` should play exactly
+like the reference does for one level, without wrapping.
+
+If you add, rename, or move a stub, update the `PHASES` list in that script.
 
 ## Simplifications compared to the reference
 
@@ -39,6 +46,12 @@ should then play exactly like the reference does for one level, without wrapping
   jump from one edge to the opposite one. There's no `wrappedDist`; students
   use p5's `dist()` in `resolveDropoff`.
 - **No `p5.sound`** script tag.
+- **`<!-- noprotect -->` in `index.html`.** The p5 web editor's loop
+  protection rewrites any `.js` file that contains a loop. Its code generator
+  crashes on class fields (`static WIDTH = 50;`, `x;`), and the sketch then
+  never starts, with no error shown in the editor. The marker turns loop
+  protection off. The cost: an infinite loop in student code freezes the tab
+  instead of being stopped.
 - **`drawPlaceholder()`** (in `utils.js`) is starter-only. Each unfinished
   shape stub calls it with the object's size constants, so every object is
   visible at its real size and shows its facing direction from the start.
