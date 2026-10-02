@@ -7,6 +7,8 @@ class Level {
   static LIVES_PAD_LEFT = 40;
   static LIVES_GAP = 18;
   static LIVES_SCALE = 0.6;
+  static HUD_TEXT_SIZE = 48;
+  static HUD_PAD = 20;
 
   name;
   junk;
@@ -36,17 +38,23 @@ class Level {
    **/
   draw(score, lives) {
     push();
-    // timer
+    // timer and score share a text style: large, at the top corners
+    noStroke();
     fill("#ffd342");
+    textSize(Level.HUD_TEXT_SIZE);
+    textAlign(LEFT, TOP);
     const { minutes, seconds } = timeToStringParts(this.timeLeft());
-    text(`${minutes}:${seconds}`, 10, 20);
+    text(`${minutes}:${seconds}`, Level.HUD_PAD, Level.HUD_PAD);
 
-    // score
-    text(`${score}`, width - 100, 20);
+    // score is right-aligned, so it grows leftward as digits are added
+    textAlign(RIGHT, TOP);
+    text(`${score}`, width - Level.HUD_PAD, Level.HUD_PAD);
 
-    // lives - note the push/pop inside the loop, not outside. This
-    // allows each life render to start from the same conditions.
-    for (let i = 0; i < lives; i++) {
+    // lives - the Magpie in play counts as one, so show the spares: one
+    // fewer icon than lives. On the last life, no icons are shown at all.
+    // Note the push/pop inside the loop, not outside. This allows each life
+    // render to start from the same conditions.
+    for (let i = 0; i < lives - 1; i++) {
       push();
       translate(
         // X offset is padded in from the left edge, plus a gap for each life

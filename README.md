@@ -7,6 +7,10 @@ will be rewritten later.
 The spec lives in the course book repo:
 `../2026-cf1-cf2-rebuild/book/src/units/homework/chapters/space-junk-game/sections/description.mdx`
 
+**Student starter code is in [`starter/`](starter/README.md).** It is a
+hand-made, stubbed-out copy of this game. When you change the reference, check
+whether `starter/` (and the homework description) need the same change.
+
 ## The game
 
 You fly a small ship, the **Magpie**. You use its tractor beam to grab floating
@@ -29,9 +33,9 @@ come after Phase 1.
 > frustrate students. Edge wrapping in particular is too complex for it: it
 > needs both position wrapping and drawing nine copies with `drawEverywhere`.
 > Move wrapping to a later phase. When fleshing out the description, break it
-> into bite-size phases, each with a worked example. The worked examples will
-> be reverse-engineered from this repo, so this repo should be a complete,
-> working game before going back to the book.
+> into bite-size phases, each with a worked example. The worked examples will be
+> reverse-engineered from this repo, so this repo should be a complete, working
+> game before going back to the book.
 
 ### Controls
 
@@ -60,8 +64,8 @@ over, a time bonus, comets, and the star.
 
 These are plain p5.js files with no build step. p5 2.3.2 is loaded from a CDN in
 `index.html`. The page must be served over HTTP, not opened as `file://`,
-because `loadJSON` uses `fetch`. Use the VS Code **Live Server** extension
-(port 5500).
+because `loadJSON` uses `fetch`. Use the VS Code **Live Server** extension (port
+5500).
 
 `npm install` is optional. It only provides editor support: the p5 type
 definitions for autocomplete (through `jsconfig.json`) and ESLint. The game
@@ -70,15 +74,14 @@ itself never uses `node_modules`.
 ## Code layout
 
 Every file is a global `<script>` loaded in `index.html`, with no ES modules.
-Script order doesn't matter much, because nothing runs until p5 calls
-`setup()`.
+Script order doesn't matter much, because nothing runs until p5 calls `setup()`.
 
-- **`sketch.js`**: the single `game` global. `async setup()` creates the
-  canvas, then `game = await Game.load()`, then adds window `blur`/`focus`
-  listeners that set `game.paused`. `draw()` clears the background, calls
-  `game.move()` with `deltaTime` capped at `MAX_DELTA_MS` unless paused, then
-  `game.draw()`. Last, if the game is `"playing"` and `game.isLevelComplete()`,
-  it calls `game.completeLevel()`.
+- **`sketch.js`**: the single `game` global. `async setup()` creates the canvas,
+  then `game = await Game.load()`, then adds window `blur`/`focus` listeners
+  that set `game.paused`. `draw()` clears the background, calls `game.move()`
+  with `deltaTime` capped at `MAX_DELTA_MS` unless paused, then `game.draw()`.
+  Last, if the game is `"playing"` and `game.isLevelComplete()`, it calls
+  `game.completeLevel()`.
 - **`game.js`**: `Game` ties everything together. It holds `levels` (all level
   configs), `levelIdx`, `level` (the loaded `Level`), `playState` (`"playing"`
   or `"loading"`), `playStateElapsed`, `magpie`, `mothership`, `inputs`,
@@ -109,47 +112,50 @@ Script order doesn't matter much, because nothing runs until p5 calls
     carrying any. `completeLevel()` switches to `"loading"` and resets
     `playStateElapsed`. `updateScore(reason)` adds `SCORE_DROPOFF` for a
     `"dropoff"`.
-- **`mothership.js`**: `Mothership` is a rectangle with a `physics` and a
-  `PICKUP_DIAMETER` circle, drawn in debug mode. `Game` uses the circle for
-  delivery.
+- **`mothership.js`**: `Mothership` has a `physics` and a `PICKUP_DIAMETER`
+  circle, drawn in debug mode. `Game` uses the circle for delivery. The static
+  `drawMothership()` draws a rounded rectangle with a row of `NUM_PORTHOLES`
+  circular windows, around the origin.
 - **`level.js`**: `Level` is built from one `levels.json` entry. It holds the
   `name`, the `junk` array, and `time` (`{ initial, elapsed }`). `timeLeft()`
-  returns the remaining ms. `draw(score, lives)` draws the timer, the score, a
-  small Magpie for each life, then the junk. `move(delta, { countTime })` adds
-  `delta` to `time.elapsed` (unless `countTime` is false) and moves the junk.
-  `removeJunk(junk)` takes a caught piece out of the `junk` array.
+  returns the remaining ms. `draw(score, lives)` draws the timer (top left) and
+  score (top right) in large text, a small Magpie for each spare life
+  (`lives - 1`, since the Magpie in play counts as one), then the junk.
+  `move(delta, { countTime })` adds `delta` to `time.elapsed` (unless
+  `countTime` is false) and moves the junk. `removeJunk(junk)` takes a caught
+  piece out of the `junk` array.
 - **`physics.js`**: `Physics` holds `x`, `y`, `dx`, `dy`, and `rotation`
-  (radians). Velocity is in pixels per second. `move(delta, { constrain })`
-  adds velocity × elapsed time to position and, if `constrain`, wraps the
-  position into `[0, width)` × `[0, height)`. `rotate(rate, delta)` turns it
-  (radians per second). `thrust(accel, delta)` speeds it up along the facing
-  direction (pixels per second, per second). `draw()` draws debug graphics: a
-  circle, a thin line to where the object will be in half a second, and a
-  thick 10px direction line.
-- **`magpie.js`**: `Magpie` holds a `physics`, a `beam` flag, and
-  `capturedJunk` (a `Junk` or `null`). `captureJunk(junk)` stores the junk and
-  turns the beam off. `enableBeam(v)` can always turn the beam off, but only
-  turns it on when nothing is being carried. The static `drawMagpie()` draws the
-  ship at the origin (beam triangle, dome, platform, window). `draw()` draws the
-  captured junk at `(0, CARGO_Y)` in the ship's frame, under the ship.
-  `move()` also updates the captured junk's real position with
-  `worldToScreen`. `beamContains({ x, y })` tests a canvas point against the
-  beam triangle with `screenToWorld`, running through `drawEverywhere` so
-  wrapped copies of the beam count.
+  (radians). Velocity is in pixels per second. `move(delta, { constrain })` adds
+  velocity × elapsed time to position and, if `constrain`, wraps the position
+  into `[0, width)` × `[0, height)`. `rotate(rate, delta)` turns it (radians per
+  second). `thrust(accel, delta)` speeds it up along the facing direction
+  (pixels per second, per second). `draw()` draws debug graphics: a circle, a
+  thin line to where the object will be in half a second, and a thick 10px
+  direction line.
+- **`magpie.js`**: `Magpie` holds a `physics`, a `beam` flag, and `capturedJunk`
+  (a `Junk` or `null`). `captureJunk(junk)` stores the junk and turns the beam
+  off. `enableBeam(v)` can always turn the beam off, but only turns it on when
+  nothing is being carried. The static `drawMagpie()` draws the ship at the
+  origin (beam triangle, dome, platform, window). `draw()` draws the captured
+  junk at `(0, CARGO_Y)` in the ship's frame, under the ship. `move()` also
+  updates the captured junk's real position with `worldToScreen`.
+  `beamContains({ x, y })` tests a canvas point against the beam triangle with
+  `screenToWorld`, running through `drawEverywhere` so wrapped copies of the
+  beam count.
 - **`junk.js`**: `Junk` is a circle with a random position and a slow random
-  drift. `beamTime` (ms) is how long it has been in the beam, and it drains
-  when the junk is out of the beam. `dropoffTime` (ms) works the same way for
-  the Mothership's pickup circle. The static `drawJunk()` draws the shape at
-  the origin.
+  drift. `beamTime` (ms) is how long it has been in the beam, and it drains when
+  the junk is out of the beam. `dropoffTime` (ms) works the same way for the
+  Mothership's pickup circle. The static `drawJunk()` draws the shape at the
+  origin.
 - **`inputs.js`**: `Inputs.handleKeyDown(delta)` checks `keyIsDown()` for WASD
-  and Space, and applies them to the Magpie (thrust 360 px/s², reverse 180
-  px/s², turning 2.4 rad/s). The global `keyPressed()` toggles
-  `game.debug` on `~` or backtick (guarded, since `game` is undefined until
-  `load()` finishes). It returns `false` only for keys in `SCROLL_KEYS` (Space
-  and the arrows).
-- **`utils.js`**: `drawEverywhere({ offset, drawFn })` draws 9 copies (3×3
-  grid) for wrapping. `timeToStringParts(ms)` returns `{ minutes, seconds }`
-  strings, like `"4"` and `"03"`.
+  and Space, and applies them to the Magpie using `Inputs.THRUST`,
+  `Inputs.REVERSE_THRUST`, and `Inputs.TURN_RATE`. The global `keyPressed()`
+  toggles `game.debug` on `~` or backtick (guarded, since `game` is undefined
+  until `load()` finishes). It returns `false` only for keys in `SCROLL_KEYS`
+  (Space and the arrows).
+- **`utils.js`**: `drawEverywhere({ offset, drawFn })` draws 9 copies (3×3 grid)
+  for wrapping. `timeToStringParts(ms)` returns `{ minutes, seconds }` strings,
+  like `"4"` and `"03"`.
 - **`levels.json`**: an array of level configs, `{ name, junk, time }`. `junk`
   is a count and `time` is in ms.
 
@@ -159,8 +165,7 @@ Script order doesn't matter much, because nothing runs until p5 calls
   lives, then junk) comes first, so the timer is under everything, as the spec
   requires. The Mothership, the Magpie, and any overlay come after.
 - **Rotation 0 means the ship faces up (−y).** Positive rotation turns
-  clockwise, because y points down on screen. Forward is
-  `(sin(r), -cos(r))`.
+  clockwise, because y points down on screen. Forward is `(sin(r), -cos(r))`.
 - **Velocity is in screen coordinates.** Rotation only changes the direction of
   thrust, which gives Asteroids-style drift.
 - **Time flows in as `delta` (ms), like Godot's `_process(delta)`.** Only
@@ -168,8 +173,8 @@ Script order doesn't matter much, because nothing runs until p5 calls
   which passes it down to every `move()`, `handleKeyDown()`, and resolve step.
   Rates are per second (velocity in px/s, thrust in px/s², turning in rad/s,
   drift around 12 px/s), and `Physics` converts with `delta / 1000`. Motion is
-  the same speed at any frame rate. The old per-frame numbers were these ×
-  1/60 (velocity, turning) or × 1/3600 (thrust).
+  the same speed at any frame rate. The old per-frame numbers were these × 1/60
+  (velocity, turning) or × 1/3600 (thrust).
 - **Wrapping takes two things:** the position must wrap (`Physics.move` with
   `constrain`), and the object must be drawn with `drawEverywhere`. Nine copies
   are needed to cover the corners, not five.
@@ -197,32 +202,32 @@ Script order doesn't matter much, because nothing runs until p5 calls
   the same constant in `Magpie.move()`. If those drift apart, what you see and
   what the game logic uses stop matching.
 - **Debug graphics:** each object's `drawFn` calls `this.physics.draw()` when
-  `game.debug` is on, after the object draws itself. At that point the
-  transform is translated but not rotated, which `Physics.draw` expects,
-  because `dx` and `dy` are in screen coordinates.
+  `game.debug` is on, after the object draws itself. At that point the transform
+  is translated but not rotated, which `Physics.draw` expects, because `dx` and
+  `dy` are in screen coordinates.
 - **Only swallow the keys you mean to.** A p5 key handler that returns `false`
   calls `preventDefault()`, so returning it for every key breaks browser
   shortcuts like Cmd-R. Scroll keys are still swallowed so the game doesn't
   scroll a parent page when embedded in an iframe.
 - **Timers use game time, not wall-clock time:** the level adds `delta` to
-  `time.elapsed` in `move()`, and remaining = `initial - elapsed`. Anything
-  that skips `move()`, like pausing, stops the timer for free. `Game` also
-  passes `countTime: false` while loading, so a cleared level's timer stops.
-  The loading delay (`playStateElapsed`) works the same way. Don't use
-  `millis()` for game timers; it keeps counting while paused.
+  `time.elapsed` in `move()`, and remaining = `initial - elapsed`. Anything that
+  skips `move()`, like pausing, stops the timer for free. `Game` also passes
+  `countTime: false` while loading, so a cleared level's timer stops. The
+  loading delay (`playStateElapsed`) works the same way. Don't use `millis()`
+  for game timers; it keeps counting while paused.
 - **Pausing is a flag, not `noLoop()`.** `sketch.js` skips `game.move()` while
   `game.paused` is set, but still draws, so the frozen scene and the "Paused"
   overlay stay on screen. It pauses on window `blur` (switching tabs or apps)
   and resumes on `focus`.
 - **`delta` is clamped to `MAX_DELTA_MS` (50) in `sketch.js`.** When a tab is
-  hidden, the browser stops calling `draw()`, so pausing alone isn't enough.
-  On `focus` the game unpauses, and the next `deltaTime` covers the whole time
-  the tab was hidden. Unclamped, that one frame would jump every object
-  seconds along its path and finish every capture timer at once. The cost:
-  below 20 fps the game runs in slow motion instead of skipping ahead.
+  hidden, the browser stops calling `draw()`, so pausing alone isn't enough. On
+  `focus` the game unpauses, and the next `deltaTime` covers the whole time the
+  tab was hidden. Unclamped, that one frame would jump every object seconds
+  along its path and finish every capture timer at once. The cost: below 20 fps
+  the game runs in slow motion instead of skipping ahead.
 - **Held keys are polled with `keyIsDown()` every frame**, not handled with key
-  callbacks, which only repeat at the OS key-repeat rate. One-shot toggles
-  (like debug) use `keyPressed()`.
+  callbacks, which only repeat at the OS key-repeat rate. One-shot toggles (like
+  debug) use `keyPressed()`.
 - **Levels are declarative JSON.** Keep data in `levels.json` and have `Level`
   create the objects from it.
 - **Use `Math.*` for math.** `Math.sin`, `Math.hypot`, `Math.max`, and so on,
@@ -242,9 +247,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
   extension agrees with Prettier.
 - `jsconfig.json` includes `node_modules/p5/types/global.d.ts`, so p5 globals
   autocomplete. Don't use `@types/p5`; it only covers p5 1.x.
-- `eslint.config.mjs` has one rule: `no-restricted-syntax` bans `for...in`
-  (use `for...of`). It does not have `no-undef`, so it won't catch assignments
-  to undeclared names.
+- `eslint.config.mjs` has one rule: `no-restricted-syntax` bans `for...in` (use
+  `for...of`). It does not have `no-undef`, so it won't catch assignments to
+  undeclared names.
 - p5 2.x details: there is no `preload()` (use `async setup()` with `await`),
   `draw()` doesn't start until an async `setup()` finishes, and `keyIsDown()`
   takes strings (`"w"`, `"KeyW"`, `"Space"`), not numeric keycodes.
@@ -253,8 +258,6 @@ Script order doesn't matter much, because nothing runs until p5 calls
 
 - Finishing the last level crashes: `levelIdx` goes past the end of `levels`.
   This is left in on purpose, as an exercise noted in `Game.move()`.
-- The timer is drawn in p5's default small text. The spec asks for large,
-  easy-to-read text.
 - There's no `windowResized()`. The canvas keeps its starting size when the
   window changes, and wrapping uses that size.
 - The timer counts down to `0:00`, but nothing happens when it gets there.

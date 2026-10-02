@@ -1,5 +1,12 @@
 /** Organizer class for user input and applying it against the magpie. */
 class Inputs {
+  /** Forward thrust, in pixels per second, per second. */
+  static THRUST = 360;
+  /** Reverse thrust is weaker than forward thrust. */
+  static REVERSE_THRUST = 180;
+  /** Turning speed, in radians per second. */
+  static TURN_RATE = 2.4;
+
   magpie;
 
   constructor(magpie) {
@@ -11,19 +18,18 @@ class Inputs {
    * frame, so holding a key has the same effect at any frame rate.
    **/
   handleKeyDown(delta) {
-    // thrust is in pixels per second, per second
     if (keyIsDown("w")) {
-      this.magpie.physics.thrust(360, delta);
+      this.magpie.physics.thrust(Inputs.THRUST, delta);
     }
     if (keyIsDown("s")) {
-      this.magpie.physics.thrust(-180, delta);
+      this.magpie.physics.thrust(-Inputs.REVERSE_THRUST, delta);
     }
-    // turning is in radians per second
+    // counter-clockwise is negative rotation, clockwise is positive
     if (keyIsDown("a")) {
-      this.magpie.physics.rotate(-2.4, delta);
+      this.magpie.physics.rotate(-Inputs.TURN_RATE, delta);
     }
     if (keyIsDown("d")) {
-      this.magpie.physics.rotate(2.4, delta);
+      this.magpie.physics.rotate(Inputs.TURN_RATE, delta);
     }
     if (keyIsDown("Space")) {
       this.magpie.enableBeam(true);
