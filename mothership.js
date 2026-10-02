@@ -42,15 +42,15 @@ class Mothership {
         wrappedDist(this.physics, junk.physics) <=
         Mothership.PICKUP_DIAMETER / 2
       ) {
-        junk.beamTime += delta;
-        if (junk.beamTime > Game.JUNK_DROPOFF_TIME_MS) {
+        junk.dropoffTime += delta;
+        if (junk.dropoffTime > Game.JUNK_DROPOFF_TIME_MS) {
           game.magpie.capturedJunk = null; // make it disappear
           game.updateScore("dropoff");
         }
       } else {
         // we have junk but not inside the drop zone. reduce elapsed time,
         // floor is at zero like always.
-        junk.beamTime = Math.max(0, junk.beamTime - delta);
+        junk.dropoffTime = Math.max(0, junk.dropoffTime - delta);
       }
     }
   }

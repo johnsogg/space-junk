@@ -28,10 +28,8 @@ function draw() {
   }
   // then draw all game elements
   game.draw();
-  // see if the level is done
-  if (game.isLevelComplete()) {
-    console.log(
-      "You win the level! Do some congrats ceremony and load the next",
-    );
+  // see if the level just completed. if so, formalize it.
+  if (game.isLevelComplete() && game.playState === "playing") {
+    game.completeLevel();
   }
 }

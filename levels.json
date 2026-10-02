@@ -1,5 +1,5 @@
 [
   { "name": "Training", "junk": 2, "time": 100000 },
-  { "name": "Level 1", "junk": 5, "time": 12000 },
-  { "name": "Level 2", "junk": 10, "time": 12000 }
+  { "name": "Level 1", "junk": 5, "time": 120000 },
+  { "name": "Level 2", "junk": 10, "time": 120000 }
 ]

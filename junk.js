@@ -2,7 +2,12 @@ class Junk {
   static DIAMETER = 20;
 
   physics;
+
+  /** How long (ms) this junk has been in the Magpie's beam. */
   beamTime;
+
+  /** How long (ms) this junk has been in the Mothership's drop zone. */
+  dropoffTime;
 
   constructor() {
     this.physics = new Physics();
@@ -11,6 +16,7 @@ class Junk {
     this.physics.dx = random(-12, 12); // pixels per second
     this.physics.dy = random(-12, 12);
     this.beamTime = 0;
+    this.dropoffTime = 0;
     this.caught = false;
   }
 

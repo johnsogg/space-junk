@@ -19,6 +19,7 @@ class Magpie {
   constructor() {
     this.physics = new Physics();
     this.beam = false;
+    this.capturedJunk = null; // intentionally empty
   }
 
   draw() {
@@ -46,6 +47,16 @@ class Magpie {
       },
     });
     pop();
+  }
+
+  /** Sets the captured junk to the given one, and turns off the beam. */
+  captureJunk(junk) {
+    this.captured = true;
+    this.capturedJunk = junk;
+    // switch off the beam. Notice the player might still have the physical key
+    // pressed down, so if that is the case, the beam will be turned on
+    // immediately again.
+    this.beam = false;
   }
 
   // this method is static. That means it doesn't use `this` to gain access to
@@ -108,7 +119,7 @@ class Magpie {
    * canvas edges count too.
    **/
   beamContains({ x, y }) {
-    // if the beamis off, bail out.
+    // if the beam is off, bail out.
     if (!this.beam) {
       return false;
     }
@@ -134,9 +145,12 @@ class Magpie {
     return inside;
   }
 
+  /**
+   * Set the beam state to on (true) or off (false). We can only turn on the
+   * beam if we are not carrying junk.
+   **/
   enableBeam(v) {
     if (!v) this.beam = v;
-    // only turn on beam if we're not carrying junk
     if (!this.capturedJunk) {
       this.beam = v;
     }

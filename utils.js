@@ -20,10 +20,10 @@ function drawEverywhere({ offset, drawFn }) {
 
 /**
  * Returns an object { minutes, seconds } where both items are strings
- * suitable for rendering. E.g. "4:03".
+ * suitable for rendering. E.g. "4" minutes, "03" seconds.
  */
 function timeToStringParts(timeMs) {
-  const secondsLeft = Math.trunc(timeMs / 1000);
+  const secondsLeft = Math.ceil(timeMs / 1000);
   const minutes = String(Math.trunc(secondsLeft / 60));
   const seconds = String(secondsLeft % 60).padStart(2, "0");
   return { minutes, seconds };
