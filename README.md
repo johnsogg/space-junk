@@ -45,13 +45,16 @@ come after Phase 1.
 Working: the Magpie flies (thrust, reverse, rotate, drift) and shows its beam
 while Space is held. Junk drifts slowly. The Mothership drifts and draws, with
 its pickup circle in debug mode. Junk held in the beam for
-`Game.JUNK_CATCH_TIME_MS` is captured and rides in the beam. Everything wraps at
-the edges. The level timer counts down. Debug graphics toggle on and off.
+`Game.JUNK_CATCH_TIME_MS` is captured and carried under the ship, and the beam
+switches off until it's delivered. Carried junk that stays in the Mothership's
+pickup circle for `Game.JUNK_DROPOFF_TIME_MS` is delivered and scores
+`Game.SCORE_DROPOFF`. When a level is cleared, a "Loading next level..." overlay
+shows for `Game.LOAD_WAIT_TIME_MS`, then the next level loads. The timer, score,
+and remaining lives are drawn. Everything wraps at the edges. Debug graphics
+toggle on and off, and the game pauses when the window loses focus.
 
-In progress: releasing captured junk and delivering it to the Mothership.
-
-Not built yet: score, lives, level progression, anything happening at the end
-of the timer, comets, and the star.
+Not built yet: losing a life, anything happening at the end of the timer, game
+over, a time bonus, comets, and the star.
 
 ## Running it
 
@@ -74,25 +77,47 @@ Script order doesn't matter much, because nothing runs until p5 calls
   canvas, then `game = await Game.load()`, then adds window `blur`/`focus`
   listeners that set `game.paused`. `draw()` clears the background, calls
   `game.move()` with `deltaTime` capped at `MAX_DELTA_MS` unless paused, then
-  `game.draw()`.
+  `game.draw()`. Last, if the game is `"playing"` and `game.isLevelComplete()`,
+  it calls `game.completeLevel()`.
 - **`game.js`**: `Game` ties everything together. It holds `levels` (all level
-  configs), `levelIdx`, `level` (the loaded `Level`), `magpie`, `mothership`,
-  `inputs`, `debug`, `score`, and `paused`. `draw()` dims the screen and shows
-  "Paused" when paused. Constructors can't be async, so the static `async load()` fetches
-  `./levels.json` and returns `new Game({ levels })`. The constructor loads
-  level 0 and places the Magpie at a random spot in the middle half of the
+  configs), `levelIdx`, `level` (the loaded `Level`), `playState` (`"playing"`
+  or `"loading"`), `playStateElapsed`, `magpie`, `mothership`, `inputs`,
+  `debug`, `score`, `lives`, and `paused`. Constructors can't be async, so the
+  static `async load()` fetches `./levels.json` and returns
+  `new Game({ levels })`. The constructor starts with `DEFAULT_NUM_LIVES`, loads
+  level 0, and places the Magpie at a random spot in the middle half of the
   screen with a random rotation, and the Mothership the same way with a slow
-  drift. `move(delta)` applies input, moves the Magpie, Mothership, and level,
-  then calls `resolveBeam(delta)`. That adds or drains each junk's `beamTime`
-  and returns the in-beam junk with the most `beamTime` once it passes
-  `JUNK_CATCH_TIME_MS`. `move` then hands that junk to the Magpie and removes
-  it from the level. `draw()` draws the level, Mothership, then Magpie.
+  drift.
+  - `move(delta)` applies input, moves the Magpie, Mothership, and level (the
+    level's timer only counts while `"playing"`), then calls
+    `resolveBeam(delta)`. That adds or drains each junk's `beamTime` and returns
+    the in-beam junk with the most `beamTime` once it passes
+    `JUNK_CATCH_TIME_MS` (or `null`). `move` hands that junk to
+    `magpie.captureJunk()` and removes it from the level. Then
+    `resolveDropoff(delta)` adds or drains the carried junk's `dropoffTime`,
+    depending on whether it's inside the Mothership's pickup circle (using
+    `wrappedDist`), and returns true once it passes `JUNK_DROPOFF_TIME_MS`.
+    `move` then clears `capturedJunk` and scores the delivery. While
+    `"loading"`, `move` also adds `delta` to `playStateElapsed`, and once it
+    reaches `LOAD_WAIT_TIME_MS`, it builds the next `Level` and goes back to
+    `"playing"`. Gameplay keeps running behind the loading overlay on purpose,
+    but the level timer is stopped.
+  - `draw()` draws the level (passing in the score and lives), Mothership, then
+    Magpie, then at most one overlay: "Paused" if paused, otherwise "Loading
+    next level..." if loading.
+  - `isLevelComplete()` is true when the level has no junk and the Magpie isn't
+    carrying any. `completeLevel()` switches to `"loading"` and resets
+    `playStateElapsed`. `updateScore(reason)` adds `SCORE_DROPOFF` for a
+    `"dropoff"`.
 - **`mothership.js`**: `Mothership` is a rectangle with a `physics` and a
-  `PICKUP_DIAMETER` circle, drawn in debug mode.
+  `PICKUP_DIAMETER` circle, drawn in debug mode. `Game` uses the circle for
+  delivery.
 - **`level.js`**: `Level` is built from one `levels.json` entry. It holds the
-  `name`, the `junk` array, and `time` (`{ initial, elapsed }`).
-  `timeLeft()` returns the remaining ms. `draw()` draws the timer text, then the
-  junk. `move(delta)` adds `delta` to `time.elapsed` and moves the junk.
+  `name`, the `junk` array, and `time` (`{ initial, elapsed }`). `timeLeft()`
+  returns the remaining ms. `draw(score, lives)` draws the timer, the score, a
+  small Magpie for each life, then the junk. `move(delta, { countTime })` adds
+  `delta` to `time.elapsed` (unless `countTime` is false) and moves the junk.
+  `removeJunk(junk)` takes a caught piece out of the `junk` array.
 - **`physics.js`**: `Physics` holds `x`, `y`, `dx`, `dy`, and `rotation`
   (radians). Velocity is in pixels per second. `move(delta, { constrain })`
   adds velocity × elapsed time to position and, if `constrain`, wraps the
@@ -102,7 +127,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
   circle, a thin line to where the object will be in half a second, and a
   thick 10px direction line.
 - **`magpie.js`**: `Magpie` holds a `physics`, a `beam` flag, and
-  `capturedJunk` (a `Junk` or nothing). The static `drawMagpie()` draws the
+  `capturedJunk` (a `Junk` or `null`). `captureJunk(junk)` stores the junk and
+  turns the beam off. `enableBeam(v)` can always turn the beam off, but only
+  turns it on when nothing is being carried. The static `drawMagpie()` draws the
   ship at the origin (beam triangle, dome, platform, window). `draw()` draws the
   captured junk at `(0, CARGO_Y)` in the ship's frame, under the ship.
   `move()` also updates the captured junk's real position with
@@ -111,7 +138,8 @@ Script order doesn't matter much, because nothing runs until p5 calls
   wrapped copies of the beam count.
 - **`junk.js`**: `Junk` is a circle with a random position and a slow random
   drift. `beamTime` (ms) is how long it has been in the beam, and it drains
-  when the junk is out of the beam. The static `drawJunk()` draws the shape at
+  when the junk is out of the beam. `dropoffTime` (ms) works the same way for
+  the Mothership's pickup circle. The static `drawJunk()` draws the shape at
   the origin.
 - **`inputs.js`**: `Inputs.handleKeyDown(delta)` checks `keyIsDown()` for WASD
   and Space, and applies them to the Magpie (thrust 360 px/s², reverse 180
@@ -127,9 +155,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
 
 ## Conventions and decisions
 
-- **Frame order:** input → move → draw. Within drawing, the level (timer, then
-  junk) comes before the Magpie, so the timer is under everything, as the spec
-  requires.
+- **Frame order:** input → move → draw. Within drawing, the level (timer, score,
+  lives, then junk) comes first, so the timer is under everything, as the spec
+  requires. The Mothership, the Magpie, and any overlay come after.
 - **Rotation 0 means the ship faces up (−y).** Positive rotation turns
   clockwise, because y points down on screen. Forward is
   `(sin(r), -cos(r))`.
@@ -156,7 +184,7 @@ Script order doesn't matter much, because nothing runs until p5 calls
   draws around (0, 0). **Never call a `draw()` from inside another
   `drawEverywhere`**: it translates a second time, and with 81 copies, all in
   the wrong place, the object seems to vanish with no error. To draw one thing
-  attached to another (junk in the beam), call the static shape draw from
+  attached to another (junk under the ship), call the static shape draw from
   inside the parent's callback.
 - **Screen vs. world in p5:** p5's "world" means the current transformed frame,
   and "screen" means canvas pixels. To move between a ship's frame and the
@@ -178,7 +206,9 @@ Script order doesn't matter much, because nothing runs until p5 calls
   scroll a parent page when embedded in an iframe.
 - **Timers use game time, not wall-clock time:** the level adds `delta` to
   `time.elapsed` in `move()`, and remaining = `initial - elapsed`. Anything
-  that skips `move()`, like pausing, stops the timer for free. Don't use
+  that skips `move()`, like pausing, stops the timer for free. `Game` also
+  passes `countTime: false` while loading, so a cleared level's timer stops.
+  The loading delay (`playStateElapsed`) works the same way. Don't use
   `millis()` for game timers; it keeps counting while paused.
 - **Pausing is a flag, not `noLoop()`.** `sketch.js` skips `game.move()` while
   `game.paused` is set, but still draws, so the frozen scene and the "Paused"
@@ -195,6 +225,13 @@ Script order doesn't matter much, because nothing runs until p5 calls
   (like debug) use `keyPressed()`.
 - **Levels are declarative JSON.** Keep data in `levels.json` and have `Level`
   create the objects from it.
+- **Use `Math.*` for math.** `Math.sin`, `Math.hypot`, `Math.max`, and so on,
+  even where p5 has its own version. The one p5 math function used is
+  `random(min, max)`, because `Math.random()` has no range.
+- **Objects get what they need from their caller, not the `game` global.**
+  `Game` passes `score` into `Level.draw(score)`, and delivery is checked in
+  `Game.resolveDropoff()` because `Game` owns both ships. The exception is
+  `game.debug`, a game-wide setting that every `draw()` reads.
 - **Names to avoid:** the global `map` (hides p5's `map()`) and the class `Map`
   (replaces JavaScript's built-in `Map`).
 
@@ -214,9 +251,8 @@ Script order doesn't matter much, because nothing runs until p5 calls
 
 ## Known issues / TODO
 
-- `sketch.js` still has the commented-out `let` lines from before the `Game`
-  refactor.
-- `Level.draw()`'s doc comment mentions lives and score, which it doesn't draw.
+- Finishing the last level crashes: `levelIdx` goes past the end of `levels`.
+  This is left in on purpose, as an exercise noted in `Game.move()`.
 - The timer is drawn in p5's default small text. The spec asks for large,
   easy-to-read text.
 - There's no `windowResized()`. The canvas keeps its starting size when the

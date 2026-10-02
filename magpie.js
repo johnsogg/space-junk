@@ -7,7 +7,7 @@ class Magpie {
   static BEAM_HEIGHT = 60;
   static WINDOW_WIDTH = Magpie.DOME_WIDTH / 4;
   static WINDOW_HEIGHT = Magpie.DOME_HEIGHT / 4;
-  /** Where captured junk sits, in the Magpie's own frame (inside the beam). */
+  /** Where captured junk sits, in the Magpie's own frame (below the ship). */
   static CARGO_Y = 40;
 
   physics;
@@ -28,7 +28,7 @@ class Magpie {
     // defer to a pure function to render nine copies, one for each cell of
     // a tic-tac-toe, where the middle is our visible canvas.
     drawEverywhere({
-      offset: { x: this.physics.x, y: this.physics.y },
+      offset: this.physics,
       drawFn: () => {
         // Draw captured junk first so the ship is drawn on top of it. We're
         // already at the Magpie's center, so use Junk's shape-only draw.
@@ -40,7 +40,7 @@ class Magpie {
           Junk.drawJunk();
           pop();
         }
-        Magpie.drawMagpie({ physics: this.physics, beam: this.beam });
+        Magpie.drawMagpie({ rotation: this.physics.rotation, beam: this.beam });
         if (game.debug) {
           this.physics.draw();
         }
@@ -51,20 +51,19 @@ class Magpie {
 
   /** Sets the captured junk to the given one, and turns off the beam. */
   captureJunk(junk) {
-    this.captured = true;
     this.capturedJunk = junk;
-    // switch off the beam. Notice the player might still have the physical key
-    // pressed down, so if that is the case, the beam will be turned on
-    // immediately again.
+    // switch off the beam. The player might still be holding Space, but
+    // enableBeam won't turn the beam back on until this junk is delivered.
+    // If Space is still held at that point, the beam comes right back.
     this.beam = false;
   }
 
   // this method is static. That means it doesn't use `this` to gain access to
   // instance members, because there _is_ no instance. This is essentially a
   // function that happens to be placed inside the Magpie namespace.
-  static drawMagpie({ physics, beam }) {
+  static drawMagpie({ rotation, beam }) {
     push();
-    rotate(physics.rotation);
+    rotate(rotation);
     if (beam) {
       const bx = Magpie.BEAM_WIDTH / 2;
       const bh = Magpie.BEAM_HEIGHT;
@@ -77,7 +76,7 @@ class Magpie {
     fill("#959ebb");
     rect(
       0,
-      0 + Magpie.DOME_HEIGHT / 2,
+      Magpie.DOME_HEIGHT / 2,
       Magpie.PLATFORM_WIDTH,
       Magpie.PLATFORM_HEIGHT,
     );
@@ -91,8 +90,8 @@ class Magpie {
     push();
     rectMode(CORNER);
     fill("#70eef5");
-    let winX = Magpie.DOME_WIDTH / 2 - Magpie.WINDOW_WIDTH;
-    let winY = -Magpie.WINDOW_HEIGHT;
+    const winX = Magpie.DOME_WIDTH / 2 - Magpie.WINDOW_WIDTH;
+    const winY = -Magpie.WINDOW_HEIGHT;
     rect(winX, winY, Magpie.WINDOW_WIDTH, Magpie.WINDOW_HEIGHT, 1.5);
     pop();
   }

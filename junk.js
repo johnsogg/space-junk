@@ -17,7 +17,6 @@ class Junk {
     this.physics.dy = random(-12, 12);
     this.beamTime = 0;
     this.dropoffTime = 0;
-    this.caught = false;
   }
 
   draw() {

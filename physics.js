@@ -53,7 +53,7 @@ class Physics {
     this.y += this.dy * seconds;
     if (constrain) {
       // When position is constrained, shift the values back into view
-      // by multiples of the width/height, either right or left.
+      // by multiples of the width/height: right or left, and up or down.
       while (this.x < 0) this.x += width;
       while (this.y < 0) this.y += height;
       while (this.x >= width) this.x -= width;
@@ -77,7 +77,7 @@ class Physics {
    */
   thrust(accel, delta) {
     const amt = accel * (delta / 1000);
-    this.dx = this.dx + sin(this.rotation) * amt;
-    this.dy = this.dy + cos(this.rotation) * -amt;
+    this.dx = this.dx + Math.sin(this.rotation) * amt;
+    this.dy = this.dy + Math.cos(this.rotation) * -amt;
   }
 }

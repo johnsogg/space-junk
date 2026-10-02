@@ -7,7 +7,10 @@ class Game {
   static JUNK_CATCH_TIME_MS = 500;
   static JUNK_DROPOFF_TIME_MS = 1000;
   static SCORE_DROPOFF = 100;
-  static LOAD_WAIT_TIME = 1000;
+  static LOAD_WAIT_TIME_MS = 1000;
+
+  /** Number of lives remaining */
+  lives;
 
   /** All level data */
   levels;
@@ -37,7 +40,7 @@ class Game {
   /** Cargo ship to take junk to. */
   mothership;
 
-  /** Input controller for keyboard/mouse */
+  /** Input controller for the keyboard */
   inputs;
 
   /** When true, draw Physics debug graphics. Toggled with ~ or backtick. */
@@ -55,9 +58,10 @@ class Game {
    * create a Game instance along the way.
    **/
   constructor({ levels }) {
+    this.lives = Game.DEFAULT_NUM_LIVES;
     this.levels = levels;
     this.levelIdx = 0;
-    this.level = new Level(this.levels[this.levelIdx], Game.DEFAULT_NUM_LIVES);
+    this.level = new Level(this.levels[this.levelIdx]);
 
     this.playState = "playing";
     this.playStateElapsed = 0;
@@ -100,26 +104,30 @@ class Game {
     this.inputs.handleKeyDown(delta);
     this.magpie.move(delta);
     this.mothership.move(delta);
-    this.level.move(delta);
+    // the level timer only runs while playing, not during the loading screen
+    this.level.move(delta, { countTime: this.playState === "playing" });
     const junk = this.resolveBeam(delta);
     if (junk) {
       this.magpie.captureJunk(junk);
       this.level.removeJunk(junk);
     }
 
-    this.mothership.resolveDropoff(delta);
+    if (this.resolveDropoff(delta)) {
+      this.magpie.capturedJunk = null; // delivered, so it disappears
+      this.updateScore("dropoff");
+    }
 
     if (this.playState === "loading") {
       // and check if we're done with the requisite loading text time
       this.playStateElapsed += delta;
-      if (this.playStateElapsed >= Game.LOAD_WAIT_TIME) {
+      if (this.playStateElapsed >= Game.LOAD_WAIT_TIME_MS) {
         console.log("loading next level for reals");
         // Note: there is a bug in the following lines of code, and I'll leave
         // it here for you to diagnose/fix. The problem is that after you've
         // finished the last level, it crashes. Do you see why? How would you
         // fix this? It is a very small change.
         this.levelIdx++;
-        this.level = new Level(this.levels[this.levelIdx], this.level.lives);
+        this.level = new Level(this.levels[this.levelIdx]);
         this.playState = "playing";
       }
     }
@@ -128,7 +136,8 @@ class Game {
   /**
    * Checks which junk, if any, is inside the Magpie's beam. The delta param
    * is the elapsed time in ms since the previous render, so it should be
-   * roughly 16ms if the frame rate remains 60 hz.
+   * roughly 16ms if the frame rate remains 60 hz. Returns the junk that has
+   * been in the beam long enough to catch, or null if there isn't one.
    **/
   resolveBeam(delta) {
     const caught = [];
@@ -143,15 +152,43 @@ class Game {
     }
     if (caught.length > 0) {
       // pick the junk with largest beam time and compare it to limit
-      const best = caught.reduce((a, b) => (b.beamTime > a.beamTime ? b : a));
+      let best = caught[0];
+      for (const junk of caught) {
+        if (junk.beamTime > best.beamTime) {
+          best = junk;
+        }
+      }
       if (best.beamTime > Game.JUNK_CATCH_TIME_MS) {
         return best;
       }
     }
+    return null;
+  }
+
+  /**
+   * Checks whether the junk the Magpie is carrying is inside the Mothership's
+   * pickup circle, and adds or drains its dropoff time to match. Returns true
+   * once it has been there longer than JUNK_DROPOFF_TIME_MS, meaning the junk
+   * is delivered.
+   **/
+  resolveDropoff(delta) {
+    const junk = this.magpie.capturedJunk;
+    if (junk == null) {
+      return false;
+    }
+    const pickupRadius = Mothership.PICKUP_DIAMETER / 2;
+    if (wrappedDist(this.mothership.physics, junk.physics) <= pickupRadius) {
+      junk.dropoffTime += delta;
+    } else {
+      // we have junk but not inside the drop zone. reduce elapsed time,
+      // floor is at zero like always.
+      junk.dropoffTime = Math.max(0, junk.dropoffTime - delta);
+    }
+    return junk.dropoffTime > Game.JUNK_DROPOFF_TIME_MS;
   }
 
   draw() {
-    this.level.draw();
+    this.level.draw(this.score, this.lives);
     this.mothership.draw();
     this.magpie.draw();
     // We can show messages, but keep it to one at a time. Priority order is
@@ -198,7 +235,7 @@ class Game {
   isLevelComplete() {
     // level is complete when there is no more junk to salvage and the magpie
     // isn't hauling anything.
-    return this.level.junk.length === 0 && this.magpie.capturedJunk == null;
+    return this.level.junk.length === 0 && this.magpie.capturedJunk === null;
   }
 
   completeLevel() {
@@ -213,7 +250,7 @@ class Game {
     //
     // Also, note that the game keeps moving in the background even as we load.
     // This is a nod to the arcade games of the 80s that always showed gameplay
-    // to intice you to drop a quarter in the slot.
+    // to entice you to drop a quarter in the slot.
     this.playState = "loading";
     this.playStateElapsed = 0;
   }

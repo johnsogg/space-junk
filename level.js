@@ -11,9 +11,8 @@ class Level {
   name;
   junk;
   time;
-  lives;
 
-  constructor(levelConfig, numLivesRemaining) {
+  constructor(levelConfig) {
     this.name = levelConfig.name;
     this.junk = [];
     for (let i = 0; i < levelConfig.junk; i++) {
@@ -23,7 +22,6 @@ class Level {
       initial: levelConfig.time,
       elapsed: 0,
     };
-    this.lives = numLivesRemaining;
   }
 
   /** Give the remaining time for this level in milliseconds. */
@@ -32,10 +30,11 @@ class Level {
   }
 
   /**
-   * Draws the UI chrome (timer, number of lives, score, and all the game
-   * entities other than the magpie)
-   * */
-  draw() {
+   * Draws the UI chrome (timer, score, and lives) and the level's junk. The
+   * Magpie and Mothership are drawn by Game, which also passes in the score
+   * and lives.
+   **/
+  draw(score, lives) {
     push();
     // timer
     fill("#ffd342");
@@ -43,21 +42,21 @@ class Level {
     text(`${minutes}:${seconds}`, 10, 20);
 
     // score
-    text(`${game.score}`, width - 100, 20);
+    text(`${score}`, width - 100, 20);
 
     // lives - note the push/pop inside the loop, not outside. This
     // allows each life render to start from the same conditions.
-    for (let i = 0; i < this.lives; i++) {
+    for (let i = 0; i < lives; i++) {
       push();
       translate(
-        // X offset is off the edge, and each life is shifted by a gap
+        // X offset is padded in from the left edge, plus a gap for each life
         Level.LIVES_PAD_LEFT + i * Level.LIVES_GAP,
         // Y offset is relative to the bottom, so subtract from height
         height - Level.LIVES_PAD_BOTTOM,
       );
       // Render an itty bitty Magpie, rotated a little to make it fun
       scale(Level.LIVES_SCALE);
-      Magpie.drawMagpie({ physics: { rotation: 0.2 }, beam: false });
+      Magpie.drawMagpie({ rotation: 0.2, beam: false });
       pop();
     }
 
@@ -68,11 +67,17 @@ class Level {
     pop();
   }
 
-  /** Moves anything owned by the level (junk, comets, etc). */
-  move(delta) {
+  /**
+   * Moves anything owned by the level (junk, comets, etc). If the `countTime`
+   * argument is present and false, the timer doesn't advance, but everything
+   * still moves.
+   **/
+  move(delta, { countTime = true } = {}) {
     // the timer counts game time, not wall-clock time, so it stops whenever
-    // move() isn't called (e.g. while paused)
-    this.time.elapsed += delta;
+    // move() isn't called (e.g. while paused), or when countTime is false.
+    if (countTime) {
+      this.time.elapsed += delta;
+    }
     for (const junk of this.junk) {
       junk.move(delta);
     }
